@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo 记事本 - Vue2</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 500px;
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    /* ---- 输入区 ---- */
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border-color 0.3s;
+      outline: none;
+    }
+
+    .input-group input:focus {
+      border-color: #667eea;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: bold;
+    }
+
+    .btn-add {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-add:hover {
+      background: #5a6fd6;
+      transform: translateY(-1px);
+    }
+
+    .btn-clear {
+      background: #ff6b6b;
+      color: white;
+    }
+
+    .btn-clear:hover {
+      background: #ee5a52;
+    }
+
+    /* ---- 筛选标签 ---- */
+    .filter-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      justify-content: center;
+    }
+
+    .filter-tab {
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.3s;
+    }
+
+    .filter-tab.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    /* ---- 统计 ---- */
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    /* ---- 列表 ---- */
+    .todo-list {
+      list-style: none;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 10px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.3s;
+    }
+
+    .todo-item:hover {
+      background: #f8f9ff;
+    }
+
+    .todo-item.completed .todo-text {
+      text-decoration: line-through;
+      color: #bbb;
+    }
+
+    .todo-checkbox {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      cursor: pointer;
+      accent-color: #667eea;
+    }
+
+    .todo-text {
+      flex: 1;
+      font-size: 15px;
+      color: #333;
+      word-break: break-all;
+    }
+
+    .todo-time {
+      font-size: 11px;
+      color: #bbb;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+
+    .btn-del {
+      background: none;
+      border: none;
+      color: #ff6b6b;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 5px;
+      opacity: 0.5;
+      transition: opacity 0.3s;
+    }
+
+    .btn-del:hover {
+      opacity: 1;
+    }
+
+    .empty-tip {
+      text-align: center;
+      color: #ccc;
+      padding: 40px 0;
+      font-size: 14px;
+    }
+
+    /* ---- 底部操作 ---- */
+    .footer-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <div class="container">
+      <h1>📝 我的记事本</h1>
+
+      <!-- 1. 输入框 + 添加按钮 -->
+      <div class="input-group">
+        <input
+          v-model="newTodo"
+          @keyup.enter="addTodo"
+          placeholder="输入要做的事情，按回车添加..."
+        />
+        <button class="btn btn-add" @click="addTodo">添加</button>
+      </div>
+
+      <!-- 2. 筛选标签 -->
+      <div class="filter-tabs">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          :class="['filter-tab', { active: filter === tab.key }]"
+          @click="filter = tab.key"
+        >{{ tab.label }}</button>
+      </div>
+
+      <!-- 3. 统计行（计算属性） -->
+      <div class="stats">
+        <span>共 {{ todos.length }} 项</span>
+        <span>已完成 {{ completedCount }} 项</span>
+      </div>
+
+      <!-- 4. 待办列表（v-for + v-if） -->
+      <ul class="todo-list" v-if="filteredTodos.length > 0">
+        <li
+          v-for="todo in filteredTodos"
+          :key="todo.id"
+          :class="['todo-item', { completed: todo.done }]"
+        >
+          <input
+            type="checkbox"
+            class="todo-checkbox"
+            v-model="todo.done"
+          />
+          <span class="todo-text">{{ todo.text }}</span>
+          <span class="todo-time">{{ todo.time }}</span>
+          <button class="btn-del" @click="removeTodo(todo.id)">×</button>
+        </li>
+      </ul>
+
+      <!-- 5. 空状态提示（条件渲染） -->
+      <div v-else class="empty-tip">
+        {{ filter === 'all' ? '还没有添加事项，快来写一条吧 ✨' : '没有匹配的事项' }}
+      </div>
+
+      <!-- 6. 底部操作 -->
+      <div class="footer-actions" v-if="todos.length > 0">
+        <button class="btn btn-clear" @click="clearCompleted">清除已完成</button>
+        <span style="color:#888;font-size:13px;line-height:2;">
+          💡 提示：勾选即完成，点击 × 删除
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== Vue2 实例 ======
+    new Vue({
+      el: '#app',
+
+      // ---- 数据 ----
+      data: {
+        newTodo: '',           // 输入框绑定
+        filter: 'all',         // 当前筛选: 'all' | 'done' | 'undone'
+        nextId: 1,            // 自增ID
+        todos: [],            // 待办数组
+
+        tabs: [
+          { key: 'all',    label: '全部' },
+          { key: 'undone', label: '未完成' },
+          { key: 'done',   label: '已完成' }
+        ]
+      },
+
+      // ---- 计算属性 ----
+      computed: {
+        // 已完成数量
+        completedCount: function() {
+          return this.todos.filter(function(t) { return t.done; }).length;
+        },
+
+        // 根据筛选条件返回列表
+        filteredTodos: function() {
+          var self = this;
+          if (this.filter === 'done') {
+            return this.todos.filter(function(t) { return t.done; });
+          } else if (this.filter === 'undone') {
+            return this.todos.filter(function(t) { return !t.done; });
+          }
+          return this.todos; // 'all' 返回全部
+        }
+      },
+
+      // ---- 方法 ----
+      methods: {
+        // 添加待办
+        addTodo: function() {
+          var text = this.newTodo.trim();
+          if (!text) return;   // 空内容不添加
+
+          this.todos.push({
+            id: this.nextId++,
+            text: text,
+            done: false,
+            time: this.getNow()
+          });
+
+          this.newTodo = '';   // 清空输入框
+          this.save();         // 持久化
+        },
+
+        // 删除待办
+        removeTodo: function(id) {
+          this.todos = this.todos.filter(function(t) { return t.id !== id; });
+          this.save();
+        },
+
+        // 清除所有已完成
+        clearCompleted: function() {
+          this.todos = this.todos.filter(function(t) { return !t.done; });
+          this.save();
+        },
+
+        // 获取当前时间字符串
+        getNow: function() {
+          var d = new Date();
+          var h = d.getHours().toString().padStart(2, '0');
+          var m = d.getMinutes().toString().padStart(2, '0');
+          return h + ':' + m;
+        },
+
+        // 保存到 localStorage
+        save: function() {
+          localStorage.setItem('vue2-todos', JSON.stringify(this.todos));
+          if (this.todos.length > 0) {
+            localStorage.setItem('vue2-nextId', this.nextId);
+          }
+        }
+      },
+
+      // ---- 监听器 ----
+      watch: {
+        // 当 todos 深度变化时自动保存（备用）
+        todos: {
+          handler: 'save',
+          deep: true
+        }
+      },
+
+      // ---- 生命周期：挂载后从本地读取 ----
+      mounted: function() {
+        var saved = localStorage.getItem('vue2-todos');
+        if (saved) {
+          try {
+            this.todos = JSON.parse(saved);
+          } catch (e) {
+            this.todos = [];
+          }
+        }
+        var savedId = localStorage.getItem('vue2-nextId');
+        if (savedId) {
+          this.nextId = parseInt(savedId, 10) || 1;
+        }
+
+        // 加两条示例数据（仅首次）
+        if (this.todos.length === 0) {
+          this.todos = [
+            { id: this.nextId++, text: '👋 欢迎使用 Vue2 记事本！', done: false, time: '--' },
+            { id: this.nextId++, text: '✅ 点击勾选标记完成', done: true, time: '--' },
+            { id: this.nextId++, text: '❌ 点击右侧 × 删除事项', done: false, time: '--' }
+          ];
+          this.save();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
