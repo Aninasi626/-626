@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>微信</title>
+<script src="./vue.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#ededed}
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+#app{width:100%;height:100%;max-width:500px;margin:0 auto;background:#fff;position:relative;display:flex;flex-direction:column}
+
+/* 顶部标题栏 */
+.topbar{background:#ededed;padding:12px 16px;text-align:center;font-size:17px;font-weight:600;color:#000;flex-shrink:0;position:relative;border-bottom:1px solid #d9d9d9}
+.topbar .back{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:28px;cursor:pointer;color:#000;line-height:1;width:32px;height:32px;display:flex;align-items:center;justify-content:center}
+
+/* 搜索栏 */
+.search-bar{padding:8px 12px;background:#ededed;flex-shrink:0}
+.search-bar input{width:100%;padding:8px 14px;border:none;border-radius:6px;background:#fff;font-size:14px;outline:none;text-align:center}
+
+/* 聊天列表 */
+.chat-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.chat-item{display:flex;align-items:center;padding:12px 16px;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background 0.15s}
+.chat-item:active{background:#ededed}
+.chat-item .av{width:48px;height:48px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:600;margin-right:12px}
+.chat-item .ct{flex:1;min-width:0}
+.chat-item .ct-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.chat-item .ct-name{font-size:16px;color:#000}
+.chat-item .ct-time{font-size:12px;color:#b0b0b0}
+.chat-item .ct-msg{font-size:13px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-item .ct-badge{background:#f43530;color:#fff;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;flex-shrink:0}
+
+/* 空状态 */
+.empty{padding:60px 0;text-align:center;color:#ccc;font-size:14px}
+
+/* ── 聊天详情 ── */
+.chat-detail{position:absolute;top:0;left:0;width:100%;height:100%;background:#f5f5f5;display:flex;flex-direction:column;z-index:10}
+
+/* 消息区域 */
+.msg-area{flex:1;overflow-y:auto;padding:12px 14px;-webkit-overflow-scrolling:touch}
+.msg-time{text-align:center;font-size:12px;color:#b0b0b0;padding:8px 0}
+.msg-row{display:flex;margin-bottom:16px}
+.msg-row.me{justify-content:flex-end}
+.msg-row .msg-av{width:36px;height:36px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:600}
+.msg-row.me .msg-av{order:2;margin-left:8px}
+.msg-row.you .msg-av{margin-right:8px}
+.msg-bubble{max-width:65%;padding:10px 13px;font-size:15px;line-height:1.5;word-break:break-all;position:relative}
+.msg-row.me .msg-bubble{background:#9EEA6A;border-radius:8px 2px 8px 8px;margin-right:0}
+.msg-row.you .msg-bubble{background:#fff;border-radius:2px 8px 8px 8px;box-shadow:0 1px 1px rgba(0,0,0,0.06)}
+
+/* 输入栏 */
+.input-bar{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f7f7f7;border-top:1px solid #e0e0e0;flex-shrink:0}
+.input-bar input{flex:1;padding:10px 12px;border:none;border-radius:6px;background:#fff;font-size:15px;outline:none}
+.input-bar .btn-send{width:56px;height:32px;border:none;border-radius:6px;background:#07c160;color:#fff;font-size:14px;cursor:pointer;flex-shrink:0;transition:background 0.2s}
+.input-bar .btn-send:active{background:#06ad56}
+
+/* 底部导航 */
+.tabbar{display:flex;border-top:1px solid #e0e0e0;background:#fafafa;flex-shrink:0}
+.tab-item{flex:1;text-align:center;padding:6px 0 2px;cursor:pointer;color:#999;font-size:10px}
+.tab-item .tab-ic{font-size:22px;display:block;margin-bottom:1px}
+.tab-item.on{color:#07c160}
+
+/* 动画 */
+.view-enter{opacity:0;transform:translateX(30px)}
+.view-enter-active{transition:all 0.3s ease}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ========== 聊天列表页 ========== -->
+  <template v-if="!chatId">
+    <div class="topbar">微信 <span style="font-size:14px;font-weight:400;color:#666">({{ unreadTotal }}条未读)</span></div>
+    <div class="search-bar"><input v-model="keyword" placeholder="搜索" /></div>
+
+    <div class="chat-list" v-if="filtered.length">
+      <div class="chat-item" v-for="c in filtered" :key="c.id" @click="enter(c)">
+        <div class="av" :style="{background:c.color}">{{ c.name[0] }}</div>
+        <div class="ct">
+          <div class="ct-top">
+            <span class="ct-name">{{ c.name }}</span>
+            <span class="ct-time">{{ c.lastTime }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span class="ct-msg">{{ c.lastMsg }}</span>
+            <span class="ct-badge" v-if="c.unread">{{ c.unread > 99 ? '99+' : c.unread }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="empty" v-else>暂无联系人</div>
+
+    <div class="tabbar">
+      <div class="tab-item on"><span class="tab-ic">💬</span>微信</div>
+      <div class="tab-item"><span class="tab-ic">👤</span>通讯录</div>
+      <div class="tab-item"><span class="tab-ic">🔍</span>发现</div>
+      <div class="tab-item"><span class="tab-ic">👤</span>我</div>
+    </div>
+  </template>
+
+  <!-- ========== 聊天详情页 ========== -->
+  <div class="chat-detail" v-if="chatId">
+    <div class="topbar">
+      <span class="back" @click="back">←</span>
+      {{ curContact ? curContact.name : '' }}
+    </div>
+
+    <div class="msg-area" ref="msgArea">
+      <template v-for="(m,i) in curMsgs">
+        <div class="msg-time" v-if="showTime(m,i)">{{ m.time }}</div>
+        <div :class="['msg-row', m.type === 'sent' ? 'me' : 'you']">
+          <div class="msg-av" :style="{background:m.type==='sent'?'#07c160':(curContact?curContact.color:'#ccc')}">
+            {{ m.type === 'sent' ? '我' : (curContact ? curContact.name[0] : '') }}
+          </div>
+          <div class="msg-bubble">{{ m.text }}</div>
+        </div>
+      </template>
+    </div>
+
+    <div class="input-bar">
+      <input v-model="inputText" @keyup.enter="send" placeholder="输入消息...">
+      <button class="btn-send" @click="send">发送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  Vue.config.errorHandler = function(e) {
+    document.getElementById('app').innerHTML =
+      '<div style="margin:20px;padding:20px;background:#c0392b;color:#fff;border-radius:8px;font-size:13px;">'+
+      '<strong>Error:</strong> '+e.message+'<br><pre style="margin-top:8px;font-size:11px;">'+(e.stack||'')+'</pre></div>';
+  };
+
+  // 预生成消息数据
+  function genMsgs(id) {
+    var pools = {
+      1: [
+        { type:'received', text:'在吗？', time:'09:30' },
+        { type:'sent', text:'在的，什么事？', time:'09:31' },
+        { type:'received', text:'下午有空吗？一起去图书馆', time:'09:32' },
+        { type:'sent', text:'好啊，几点？', time:'09:33' },
+        { type:'received', text:'两点吧，老地方见', time:'09:34' },
+        { type:'sent', text:'👌', time:'09:35' },
+        { type:'received', text:'好的，明天见', time:'14:23' }
+      ],
+      2: [
+        { type:'received', text:'今天的作业是什么？', time:'10:05' },
+        { type:'sent', text:'第三章课后习题', time:'10:07' },
+        { type:'received', text:'好的谢谢！', time:'10:08' },
+        { type:'received', text:'对了，明天要交吗', time:'10:10' },
+        { type:'sent', text:'嗯，明天上午截止', time:'10:12' },
+        { type:'received', text:'😱那得赶紧写了', time:'10:12' }
+      ],
+      3: [
+        { type:'received', text:'儿子，吃饭了吗？', time:'18:30' },
+        { type:'sent', text:'吃了吃了，食堂吃的', time:'18:35' },
+        { type:'received', text:'注意身体，别老熬夜', time:'18:36' },
+        { type:'received', text:'生活费还够吗', time:'18:36' },
+        { type:'sent', text:'够的够的，放心吧', time:'18:40' }
+      ],
+      4: [
+        { type:'sent', text:'hello，请问有前端学习资源推荐吗？', time:'11:00' },
+        { type:'received', text:'有啊，你想要哪方面的？', time:'11:05' },
+        { type:'received', text:'Vue 还是 React', time:'11:05' },
+        { type:'sent', text:'Vue 吧，我目前在学 Vue 2', time:'11:07' },
+        { type:'received', text:'推荐官方文档 + 这个练手项目合集', time:'11:08' }
+      ],
+      5: [
+        { type:'received', text:'周末一起去打球吗？', time:'15:20' },
+        { type:'sent', text:'什么球？', time:'15:22' },
+        { type:'received', text:'篮球🏀', time:'15:23' },
+        { type:'sent', text:'行，周六下午？', time:'15:25' },
+        { type:'received', text:'OK，我叫上老王', time:'15:26' }
+      ],
+      6: [
+        { type:'received', text:'活动场地已确认，周六下午2点教学楼301', time:'08:00' },
+        { type:'received', text:'收到请回复', time:'08:01' },
+        { type:'sent', text:'收到', time:'08:30' },
+        { type:'received', text:'好的', time:'08:31' }
+      ],
+      7: [
+        { type:'received', text:'你们宿舍网费该交了哈', time:'20:00' },
+        { type:'sent', text:'多少钱？', time:'20:05' },
+        { type:'received', text:'一人30', time:'20:06' },
+        { type:'sent', text:'转你了', time:'20:08' },
+        { type:'received', text:'收到 👍', time:'20:08' }
+      ],
+      8: [
+        { type:'sent', text:'老师，论文初稿发您邮箱了，麻烦看一下', time:'16:00' },
+        { type:'received', text:'好的，我这两天看', time:'16:30' },
+        { type:'received', text:'整体框架不错，第三章需要再补充一些数据支撑', time:'19:45' },
+        { type:'sent', text:'好的老师，我尽快修改', time:'19:50' }
+      ]
+    };
+    var msgs = pools[id] || [];
+    return msgs.map(function(m, i) {
+      return { id: id*100+i, text: m.text, type: m.type, time: m.time };
+    });
+  }
+
+  new Vue({
+    el: '#app',
+    data: {
+      keyword: '',
+      chatId: null,          // null=列表页, 其他=聊天详情
+      inputText: '',
+      contacts: [
+        { id:1, name:'小明', color:'#e74c3c', lastMsg:'好的，明天见', lastTime:'14:23', unread:3 },
+        { id:2, name:'同学小红', color:'#3498db', lastMsg:'😱那得赶紧写了', lastTime:'10:12', unread:0 },
+        { id:3, name:'妈妈', color:'#e91e63', lastMsg:'生活费还够吗', lastTime:'18:36', unread:2 },
+        { id:4, name:'前端交流群', color:'#2ecc71', lastMsg:'推荐官方文档 + 这个练手项目合集', lastTime:'11:08', unread:12 },
+        { id:5, name:'球友老张', color:'#f39c12', lastMsg:'OK，我叫上老王', lastTime:'15:26', unread:0 },
+        { id:6, name:'班级通知群', color:'#9b59b6', lastMsg:'收到请回复', lastTime:'08:01', unread:5 },
+        { id:7, name:'室友小李', color:'#1abc9c', lastMsg:'收到 👍', lastTime:'20:08', unread:0 },
+        { id:8, name:'导师', color:'#34495e', lastMsg:'整体框架不错，第三章需要再补充一些数据支撑', lastTime:'19:45', unread:1 }
+      ],
+      allMsgs: {} // { contactId: [msgs] }
+    },
+
+    computed: {
+      filtered: function() {
+        var kw = this.keyword.trim().toLowerCase();
+        if (!kw) return this.contacts;
+        var list = this.contacts;
+        return list.filter(function(c) {
+          return c.name.toLowerCase().indexOf(kw) > -1;
+        });
+      },
+      unreadTotal: function() {
+        var sum = 0;
+        this.contacts.forEach(function(c) { sum += c.unread; });
+        return sum;
+      },
+      curContact: function() {
+        if (!this.chatId) return null;
+        var id = this.chatId;
+        var list = this.contacts;
+        for (var i = 0; i < list.length; i++) {
+          if (list[i].id === id) return list[i];
+        }
+        return null;
+      },
+      curMsgs: function() {
+        if (!this.chatId) return [];
+        return this.allMsgs[this.chatId] || [];
+      }
+    },
+
+    methods: {
+      enter: function(c) {
+        this.chatId = c.id;
+        this.inputText = '';
+        // 清除未读
+        c.unread = 0;
+        // 懒加载消息
+        if (!this.allMsgs[c.id]) {
+          this.$set(this.allMsgs, c.id, genMsgs(c.id));
+        }
+        var s = this;
+        this.$nextTick(function() { s.scrollBottom(); });
+      },
+
+      back: function() {
+        this.chatId = null;
+        this.inputText = '';
+        this.save();
+      },
+
+      send: function() {
+        var text = this.inputText.trim();
+        if (!text || !this.chatId) return;
+
+        var now = new Date();
+        var h = now.getHours().toString().padStart(2, '0');
+        var m = now.getMinutes().toString().padStart(2, '0');
+        var time = h + ':' + m;
+
+        var msgs = this.allMsgs[this.chatId];
+        msgs.push({ id: Date.now(), text: text, type: 'sent', time: time });
+
+        // 更新联系人列表
+        var c = this.curContact;
+        if (c) {
+          c.lastMsg = text;
+          c.lastTime = time;
+        }
+
+        this.inputText = '';
+        var s = this;
+        this.$nextTick(function() { s.scrollBottom(); });
+
+        // 自动回复
+        var replyPool = [
+          '好的', '收到', '嗯嗯', '哈哈', '👍', '可以可以',
+          '等会儿说', '有道理', '加油💪', '确实', '哈哈哈笑死',
+          '明白', 'OK', '没问题', '下次约', '厉害啊'
+        ];
+        var reply = replyPool[Math.floor(Math.random() * replyPool.length)];
+
+        setTimeout(function() {
+          var rh = new Date().getHours().toString().padStart(2, '0');
+          var rm = new Date().getMinutes().toString().padStart(2, '0');
+          msgs.push({ id: Date.now(), text: reply, type: 'received', time: rh + ':' + rm });
+          if (c) { c.lastMsg = reply; c.lastTime = rh + ':' + rm; }
+          s.$nextTick(function() { s.scrollBottom(); });
+        }, 800 + Math.random() * 1200);
+      },
+
+      showTime: function(m, i) {
+        if (i === 0) return true;
+        var prev = this.curMsgs[i - 1];
+        return prev && prev.time !== m.time;
+      },
+
+      scrollBottom: function() {
+        var el = this.$refs.msgArea;
+        if (el) {
+          this.$nextTick(function() {
+            el.scrollTop = el.scrollHeight;
+          });
+        }
+      },
+
+      save: function() {
+        // 保存联系人和消息到 localStorage
+        try {
+          localStorage.setItem('wx-contacts', JSON.stringify(this.contacts));
+          localStorage.setItem('wx-msgs', JSON.stringify(this.allMsgs));
+        } catch(e) {}
+      }
+    },
+
+    watch: {
+      contacts: { deep: true, handler: 'save' },
+      allMsgs: { deep: true, handler: 'save' }
+    },
+
+    mounted: function() {
+      // 恢复数据
+      try {
+        var c = localStorage.getItem('wx-contacts');
+        if (c) this.contacts = JSON.parse(c);
+        var m = localStorage.getItem('wx-msgs');
+        if (m) this.allMsgs = JSON.parse(m);
+      } catch(e) {}
+    }
+  });
+})();
+</script>
+</body>
+</html>

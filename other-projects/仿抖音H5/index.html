@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>仿抖音 H5</title>
+<script src="./vue.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+#app{width:100%;height:100%}
+.app{width:100%;height:100%;position:relative;overflow:hidden}
+.vp{width:100%;height:100%;position:relative;overflow:hidden}
+.slide{position:absolute;top:0;left:0;width:100%;height:100%;transition:transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94)}
+.slide.dragging{transition:none}
+.slide.p1{transform:translateY(-100%)}
+.slide.p2{transform:translateY(0)}
+.slide.p3{transform:translateY(100%)}
+.slide video{width:100%;height:100%;object-fit:cover;display:block;background:#111}
+.slide .bg{position:absolute;top:0;left:0;right:0;bottom:0}
+.slide .bg canvas{width:100%;height:100%;display:block}
+
+/* 播放暂停图标 */
+.play-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:68px;height:68px;border-radius:50%;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;font-size:30px;color:#fff;pointer-events:none;z-index:5;opacity:0;transition:opacity 0.15s}
+.play-icon.show{opacity:1;animation:piFade 0.6s forwards}
+@keyframes piFade{0%{opacity:1;transform:translate(-50%,-50%) scale(0.5)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+
+/* 加载旋转 */
+.loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;z-index:5}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+/* 进度条 */
+.progress{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,0.25);z-index:5}
+.progress-inner{height:100%;background:#ff2d55;transition:width 0.3s linear}
+
+/* 红心 */
+.heart{position:fixed;pointer-events:none;z-index:99;font-size:80px;color:#ff2d55;animation:hb 1s forwards}
+@keyframes hb{0%{transform:translate(-50%,-50%) scale(0);opacity:1}20%{transform:translate(-50%,-50%) scale(1.2);opacity:1}40%{transform:translate(-50%,-50%) scale(0.9)}60%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-50%,-50%) scale(0.8);opacity:0}}
+
+/* 顶部标签 */
+.header{position:absolute;top:0;left:0;right:0;z-index:20;padding:14px 16px;display:flex;gap:18px}
+.header span{color:rgba(255,255,255,0.6);font-size:16px;cursor:pointer;transition:all 0.2s}
+.header span.on{color:#fff;font-size:18px;font-weight:700}
+
+/* 滑动提示 */
+.swipe-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,0.7);font-size:14px;z-index:25;pointer-events:none;letter-spacing:2px;animation:shFade 2.5s forwards}
+@keyframes shFade{0%{opacity:1}70%{opacity:1}100%{opacity:0}}
+
+/* 右侧互动 */
+.sidebar{position:absolute;right:12px;bottom:140px;z-index:10;display:flex;flex-direction:column;align-items:center;gap:22px}
+.sb{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.sb-av{width:48px;height:48px;border-radius:50%;border:2px solid #fff;margin-bottom:4px;transition:transform 0.2s}
+.sb:active .sb-av{transform:scale(0.9)}
+.sb-plus{width:22px;height:22px;border-radius:50%;background:#ff2d55;color:#fff;font-size:16px;font-weight:bold;display:flex;align-items:center;justify-content:center;margin-top:-12px;position:relative;z-index:1}
+.sb-ic{font-size:34px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.5);transition:transform 0.15s}
+.sb:active .sb-ic{transform:scale(1.15)}
+.sb-ct{color:#fff;font-size:12px;margin-top:2px;text-shadow:0 1px 3px rgba(0,0,0,0.5)}
+.liked .sb-ic{color:#ff2d55}
+
+/* 底部信息 */
+.info{position:absolute;left:14px;right:80px;bottom:20px;z-index:10;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.5)}
+.info .nm{font-weight:600;font-size:15px;margin-bottom:6px}
+.info .ds{font-size:13px;opacity:0.9;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.info .mu{font-size:12px;opacity:0.8;display:flex;align-items:center;gap:4px}
+.info .mu .mu-text{overflow:hidden;white-space:nowrap;max-width:180px;animation:marquee 3.5s linear infinite}
+@keyframes marquee{0%{transform:translateX(60px)}100%{transform:translateX(-100%)}}
+
+/* toast */
+.toast{position:absolute;top:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;z-index:30;transition:opacity 0.3s}
+
+/* 弹窗 */
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:50}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;z-index:60;max-height:60vh;overflow-y:auto;transition:transform 0.3s}
+.sh0{transform:translateY(100%)}
+.sh1{transform:translateY(0)}
+.sheet h3{text-align:center;padding:16px;font-size:15px;border-bottom:1px solid #eee;position:relative}
+.sheet .cl{position:absolute;right:16px;top:14px;font-size:22px;color:#999;cursor:pointer}
+.cmt{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid #f5f5f5;font-size:13px}
+.cav{width:32px;height:32px;border-radius:50%;flex-shrink:0}
+.cnm{color:#999;font-size:12px;margin-bottom:2px}
+.ctx{color:#333}
+.sinp{display:flex;gap:10px;padding:12px 16px;border-top:1px solid #eee}
+.sinp input{flex:1;padding:10px 14px;border:none;border-radius:20px;background:#f5f5f5;font-size:14px;outline:none}
+.sinp button{border:none;background:#ff2d55;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;cursor:pointer}
+.srow{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;padding:20px}
+.sit{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#333}
+.sic{width:50px;height:50px;border-radius:50%;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:24px}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="app"
+    @touchstart.prevent="ts"
+    @touchmove.prevent="tm"
+    @touchend.prevent="te"
+    @dblclick="db">
+
+    <!-- 顶部标签 -->
+    <div class="header">
+      <span v-for="(v,i) in list" :key="v.id"
+        :class="{on:i===idx}" @click="go(i)">{{ v.tag }}</span>
+    </div>
+
+    <!-- 滑动提示 -->
+    <div class="swipe-hint" v-if="hint">↑↓ 滑动切换视频</div>
+
+    <!-- 视频区 -->
+    <div class="vp">
+      <div v-for="(v,i) in show" :key="v.id"
+        :class="['slide', pos(i), {dragging: drag}]"
+        :style="drag ? {transform: 'translateY(' + (basePct(i) + dragOff) + '%)'} : {}"
+        @click.stop="tp(v)">
+        <video :ref="'v_'+v.id" :src="v.src" loop playsinline
+          webkit-playsinline x5-video-player-type="h5" x5-video-orientation="portrait"
+          preload="auto"></video>
+        <div class="bg" :style="{background:v.color}"></div>
+
+        <!-- 加载中 -->
+        <div class="loading" v-if="v.loading"></div>
+
+        <!-- 播放暂停图标 -->
+        <div :class="['play-icon', {show: v.showIcon}]">
+          {{ v.paused ? '▶' : '⏸' }}
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress"><div class="progress-inner" :style="{width:v.progress+'%'}"></div></div>
+      </div>
+      <!-- 红心 -->
+      <div class="heart" v-for="h in hearts" :key="h.k"
+        :style="{left:h.x+'px',top:h.y+'px'}">♥</div>
+    </div>
+
+    <!-- 底部信息 -->
+    <div class="info" v-if="cur">
+      <div class="nm">@{{ cur.author }}</div>
+      <div class="ds">{{ cur.desc }}</div>
+      <div class="mu">🎵 <span class="mu-text">{{ cur.music }}</span></div>
+    </div>
+
+    <!-- toast -->
+    <div class="toast" v-if="toast" :style="{opacity:toast?1:0}">{{ toast }}</div>
+
+    <!-- 右侧互动 -->
+    <div class="sidebar" v-if="cur">
+      <div class="sb">
+        <div class="sb-av" :style="{background:cur.color}"></div>
+        <div class="sb-plus">+</div>
+      </div>
+      <div class="sb" :class="{liked:cur.liked}" @click.stop="like">
+        <span class="sb-ic">♥</span>
+        <span class="sb-ct">{{ fmt(cur.likes) }}</span>
+      </div>
+      <div class="sb" @click.stop="oc">
+        <span class="sb-ic">💬</span>
+        <span class="sb-ct">{{ cur.comments.length }}</span>
+      </div>
+      <div class="sb" @click.stop="os">
+        <span class="sb-ic">↗</span>
+        <span class="sb-ct">{{ fmt(cur.shares) }}</span>
+      </div>
+    </div>
+
+    <!-- 评论弹窗 -->
+    <div class="overlay" v-if="cs" @click="cc"></div>
+    <div :class="['sheet', cs?'sh1':'sh0']">
+      <h3>评论 {{ cur ? cur.comments.length : 0 }}
+        <span class="cl" @click="cc">&times;</span>
+      </h3>
+      <div v-if="cur">
+        <div class="cmt" v-for="c in cur.comments" :key="c.id">
+          <div class="cav" :style="{background:c.color}"></div>
+          <div><div class="cnm">{{ c.name }}</div><div class="ctx">{{ c.text }}</div></div>
+        </div>
+      </div>
+      <div style="text-align:center;color:#ccc;padding:20px" v-if="cur && !cur.comments.length">暂无评论</div>
+      <div class="sinp">
+        <input v-model="ct" @keyup.enter="ca" placeholder="说点什么...">
+        <button @click="ca">发送</button>
+      </div>
+    </div>
+
+    <!-- 分享弹窗 -->
+    <div class="overlay" v-if="ss" @click="sc"></div>
+    <div :class="['sheet', ss?'sh1':'sh0']">
+      <div class="srow">
+        <div class="sit"><div class="sic">💬</div>微信</div>
+        <div class="sit"><div class="sic">👥</div>朋友圈</div>
+        <div class="sit"><div class="sic">📱</div>QQ</div>
+        <div class="sit"><div class="sic">🔗</div>链接</div>
+        <div class="sit"><div class="sic">📥</div>保存</div>
+        <div class="sit"><div class="sic">😷</div>举报</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  Vue.config.errorHandler = function(e) {
+    document.getElementById('app').innerHTML =
+      '<div style="margin:20px;padding:20px;background:#c0392b;color:#fff;border-radius:8px;font-size:13px;">'+
+      '<strong>Error:</strong> '+e.message+'<br><pre style="margin-top:8px;font-size:11px;">'+(e.stack||'')+'</pre></div>';
+  };
+
+  new Vue({
+  el: '#app',
+  data: {
+    idx: 0,
+    drag: false,
+    dragY: 0,
+    hint: true,
+    list: [
+      { id:1, tag:'推荐', src:'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+        author:'旅行者小张', color:'#e74c3c',
+        desc:'春天的花开了，带你们看看这片花海',
+        music:'@旅行者小张 · 原创', likes:2341, shares:89,
+        comments:[], liked:false, loading:false, progress:0, showIcon:false, paused:false },
+      { id:2, tag:'热门', src:'https://filesamples.com/samples/video/mp4/sample_640x360.mp4',
+        author:'海边日记', color:'#3498db',
+        desc:'夏天的海边，治愈系风景',
+        music:'Mojito - 周杰伦', likes:5842, shares:234,
+        comments:[], liked:false, loading:false, progress:0, showIcon:false, paused:false },
+      { id:3, tag:'关注', src:'https://media.w3.org/2010/05/sintel/trailer.mp4',
+        author:'天空之城', color:'#2ecc71',
+        desc:'蓝天白云，此刻只想放空自己',
+        music:'@天空之城 · 原创', likes:1230, shares:45,
+        comments:[], liked:false, loading:false, progress:0, showIcon:false, paused:false },
+      { id:4, tag:'推荐', src:'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4',
+        author:'浪花一朵朵', color:'#f39c12',
+        desc:'海浪声是最好的白噪音',
+        music:'海浪的声音 · 原创', likes:7891, shares:567,
+        comments:[], liked:false, loading:false, progress:0, showIcon:false, paused:false },
+      { id:5, tag:'热门', src:'https://filesamples.com/samples/video/mp4/sample_960x540.mp4',
+        author:'山林探险家', color:'#9b59b6',
+        desc:'森林里的小溪，大自然的声音',
+        music:'@山林探险家 · 原创', likes:3456, shares:123,
+        comments:[], liked:false, loading:false, progress:0, showIcon:false, paused:false }
+    ],
+    tsY: 0, tsTime: 0, moving: false,
+    hearts: [], hSeq: 0,
+    toast: '',
+    cs: false, ct: '',
+    pool: [
+      { id:1, name:'小明', text:'这也太好看了吧！！', color:'#e74c3c' },
+      { id:2, name:'小红', text:'好想去啊啊啊', color:'#3498db' },
+      { id:3, name:'网友A', text:'背景音乐是什么？', color:'#2ecc71' },
+      { id:4, name:'路人甲', text:'每天看一遍心情好一天', color:'#f39c12' },
+      { id:5, name:'吃瓜群众', text:'已收藏', color:'#9b59b6' }
+    ],
+    ss: false,
+    timer: null
+  },
+
+  computed: {
+    cur: function(){ return this.list[this.idx]; },
+    show: function(){
+      var a = [];
+      if (this.idx > 0) a.push(this.list[this.idx-1]);
+      a.push(this.list[this.idx]);
+      if (this.idx < this.list.length-1) a.push(this.list[this.idx+1]);
+      return a;
+    },
+    dragOff: function(){
+      return this.drag ? (-this.dragY / window.innerHeight) * 100 : 0;
+    }
+  },
+
+  methods: {
+
+    // ── 定位 ──
+    pos: function(i){
+      var L = this.show.length;
+      if (L === 1) return 'p2';
+      if (this.idx === 0) return i === 0 ? 'p2' : 'p3';
+      if (this.idx === this.list.length - 1) return i === L - 1 ? 'p2' : 'p1';
+      return i === 0 ? 'p1' : i === 1 ? 'p2' : 'p3';
+    },
+    basePct: function(i){
+      var p = this.pos(i);
+      if (p === 'p1') return -100;
+      if (p === 'p3') return 100;
+      return 0;
+    },
+
+    // ── 手势（三事件：start / move / end） ──
+    ts: function(e){
+      this.tsY = e.touches[0].clientY;
+      this.tsTime = Date.now();
+    },
+    tm: function(e){
+      // 拖拽时微调位置，产生跟手效果
+      if (this.moving) return;
+      var dy = this.tsY - e.touches[0].clientY;
+      if (Math.abs(dy) < 10) return;
+      this.drag = true;
+      this.dragY = dy;
+    },
+    te: function(e){
+      if (this.moving) return;
+      this.drag = false;
+      var dy = this.tsY - e.changedTouches[0].clientY;
+      var dt = Date.now() - this.tsTime;
+
+      // 快速滑动（惯性）降低阈值
+      var threshold = dt < 300 ? 25 : 50;
+      if (Math.abs(dy) < threshold) return;
+
+      if (dy > 0 && this.idx < this.list.length - 1) {
+        this.go(this.idx + 1);
+      } else if (dy < 0 && this.idx > 0) {
+        this.go(this.idx - 1);
+      } else if (Math.abs(dy) >= threshold) {
+        this.toastMsg(dy > 0 ? '已经是最后一个了' : '已经是第一个了');
+      }
+    },
+
+    // ── 切换视频 ──
+    go: function(n){
+      var s = this;
+      this.hint = false;
+      this.stopV();
+      this.moving = true;
+      this.idx = n;
+      this.$nextTick(function(){
+        s.restartCanvases();
+        s.preloadNearby();
+        s.playV();
+      });
+      setTimeout(function(){ s.moving = false; }, 360);
+    },
+
+    restartCanvases: function(){
+      var s = this;
+      this.show.forEach(function(v){
+        if (!s._canvasRunning[v.id]) {
+          var fn = s._drawFns[v.id];
+          if (fn) fn();
+        }
+      });
+    },
+
+    // 预加载相邻视频
+    preloadNearby: function(){
+      var s = this;
+      [-1, 1].forEach(function(offset){
+        var i = s.idx + offset;
+        if (i < 0 || i >= s.list.length) return;
+        var v = s.list[i];
+        if (!v.src) return;
+        var el = s.vel(v);
+        if (el && !el.dataset.preloaded) {
+          el.dataset.preloaded = '1';
+          el.load();
+        }
+      });
+    },
+
+    // ── 双击 ──
+    db: function(e){
+      this.heart(e.clientX, e.clientY);
+      if (this.cur && !this.cur.liked) this.like();
+    },
+
+    // ── 视频元素 ──
+    vel: function(v){
+      var r = this.$refs['v_'+v.id];
+      return r ? (Array.isArray(r) ? r[0] : r) : null;
+    },
+    stopV: function(){
+      var v = this.cur; if (!v) return;
+      var el = this.vel(v); if (el) el.pause();
+      v.progress = 0;
+      this.stopT();
+    },
+    playV: function(){
+      var v = this.cur; if (!v || !v.src) return;
+      var el = this.vel(v); if (!el) return;
+      el.currentTime = 0;
+      el.style.display = 'block';
+      var bg = el.parentElement.querySelector('.bg');
+      if (bg) bg.style.display = 'none';
+      v.loading = true;
+      v.paused = false;
+      var p = el.play();
+      if (p && p.then) {
+        p.then(function(){ v.loading = false; }).catch(function(){ v.loading = false; });
+      }
+      this.startT();
+    },
+
+    // ── 点击播放/暂停 ──
+    tp: function(v){
+      if (!v.src) return;
+      var el = this.vel(v); if (!el) return;
+      if (el.paused) {
+        el.play().catch(function(){});
+        v.paused = false;
+        this.startT();
+      } else {
+        el.pause();
+        v.paused = true;
+        this.stopT();
+      }
+      // 显示播放/暂停图标
+      v.showIcon = true;
+      var s = this;
+      setTimeout(function(){ v.showIcon = false; }, 600);
+    },
+
+    // ── 进度条 ──
+    startT: function(){
+      this.stopT();
+      var s = this;
+      this.timer = setInterval(function(){
+        var v = s.cur; if (!v || !v.src) return;
+        var el = s.vel(v);
+        if (el && el.duration) v.progress = (el.currentTime / el.duration) * 100;
+      }, 250);
+    },
+    stopT: function(){
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    },
+
+    // ── 点赞 ──
+    like: function(){
+      var v = this.cur; if (!v) return;
+      v.liked = !v.liked;
+      v.likes += v.liked ? 1 : -1;
+      this.toastMsg(v.liked ? '已点赞' : '已取消');
+    },
+    heart: function(x, y){
+      var s = this;
+      var k = ++this.hSeq;
+      this.hearts.push({ k: k, x: x, y: y });
+      setTimeout(function(){
+        s.hearts = s.hearts.filter(function(h){ return h.k !== k; });
+      }, 1000);
+    },
+
+    // ── 评论 ──
+    oc: function(){
+      var v = this.cur;
+      if (v && v.comments.length === 0) {
+        var a = this.pool.slice().sort(function(){ return Math.random() - 0.5; });
+        v.comments = a.slice(0, 3).map(function(c){
+          return { id: c.id+'_'+v.id, name: c.name, text: c.text, color: c.color };
+        });
+      }
+      this.cs = true; this.stopV();
+    },
+    cc: function(){ this.cs = false; this.playV(); },
+    ca: function(){
+      var t = this.ct.trim();
+      if (!t || !this.cur) return;
+      this.cur.comments.push({ id: Date.now(), name: '我', text: t, color: '#ff2d55' });
+      this.ct = '';
+    },
+
+    // ── 分享 ──
+    os: function(){ this.ss = true; this.stopV(); },
+    sc: function(){ this.ss = false; this.playV(); },
+
+    // ── 工具 ──
+    fmt: function(n){
+      if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+      return String(n);
+    },
+    toastMsg: function(msg){
+      this.toast = msg;
+      var s = this;
+      setTimeout(function(){ s.toast = ''; }, 1200);
+    }
+  },
+
+  mounted: function(){
+    var s = this;
+
+    // 3秒后隐藏滑动提示
+    setTimeout(function(){ s.hint = false; }, 3000);
+
+    // 初始化评论
+    this.list.forEach(function(v){
+      var a = s.pool.slice().sort(function(){ return Math.random() - 0.5; });
+      v.comments = a.slice(0, 3).map(function(c){
+        return { id: c.id+'_'+v.id, name: c.name, text: c.text, color: c.color };
+      });
+    });
+
+    this.$nextTick(function(){
+
+      // ── Canvas 动画背景 ──
+      s._drawFns = {};
+      s._canvasRunning = {};
+      s.list.forEach(function(v){
+        var el = s.vel(v);
+        var bg = el ? el.parentElement.querySelector('.bg') : null;
+        if (!bg) return;
+
+        var canvas = document.createElement('canvas');
+        bg.appendChild(canvas);
+        var ctx = canvas.getContext('2d');
+
+        var hex = v.color.replace('#','');
+        var r = parseInt(hex.substring(0,2),16);
+        var g = parseInt(hex.substring(2,4),16);
+        var b = parseInt(hex.substring(4,6),16);
+
+        var particles = [];
+        var W = 400, H = 700;
+        var time = Math.random() * 100;
+
+        for (var p = 0; p < 25; p++) {
+          particles.push({
+            x: Math.random() * W, y: Math.random() * H,
+            r: Math.random() * 80 + 30,
+            vx: (Math.random() - 0.5) * 0.4,
+            vy: (Math.random() - 0.5) * 0.4 + 0.1,
+            alpha: Math.random() * 0.12 + 0.04
+          });
+        }
+
+        function resize(){
+          W = canvas.clientWidth || 400;
+          H = canvas.clientHeight || 700;
+          if (canvas.width !== W || canvas.height !== H) {
+            canvas.width = W; canvas.height = H;
+          }
+        }
+
+        function draw(){
+          if (s.show.indexOf(v) === -1) { s._canvasRunning[v.id] = false; return; }
+          s._canvasRunning[v.id] = true;
+          resize();
+          time += 0.008;
+
+          var grad = ctx.createLinearGradient(0, 0, W, H);
+          grad.addColorStop(0, 'rgb('+Math.min(255,r+40)+','+Math.min(255,g+40)+','+Math.min(255,b+40)+')');
+          grad.addColorStop(0.5, 'rgb('+r+','+g+','+b+')');
+          grad.addColorStop(1, 'rgb('+Math.max(0,r-50)+','+Math.max(0,g-50)+','+Math.max(0,b-50)+')');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, W, H);
+
+          ctx.lineWidth = 2;
+          for (var w = 0; w < 4; w++) {
+            var baseY = H * 0.2 + w * H * 0.18;
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255,255,255,' + (0.08 - w * 0.015) + ')';
+            for (var x = 0; x < W; x += 3) {
+              var y = baseY + Math.sin(x * 0.008 + time * 2 + w) * 25 + Math.cos(x * 0.015 + time) * 15;
+              if (x === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          }
+
+          for (var p2 = 0; p2 < particles.length; p2++) {
+            var pt = particles[p2];
+            pt.x += pt.vx;
+            pt.y += pt.vy + Math.sin(time + p2) * 0.15;
+            if (pt.x < -100) pt.x = W + 100;
+            if (pt.x > W + 100) pt.x = -100;
+            if (pt.y < -100) pt.y = H + 100;
+            if (pt.y > H + 100) pt.y = -100;
+
+            var glow = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, pt.r);
+            glow.addColorStop(0, 'rgba(255,255,255,' + pt.alpha * 1.5 + ')');
+            glow.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(pt.x - pt.r, pt.y - pt.r, pt.r * 2, pt.r * 2);
+          }
+
+          ctx.beginPath();
+          ctx.arc(W/2, H/2, 35, 0, Math.PI*2);
+          ctx.fillStyle = 'rgba(255,255,255,0.18)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(W/2-12, H/2-20);
+          ctx.lineTo(W/2-12, H/2+20);
+          ctx.lineTo(W/2+22, H/2);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(255,255,255,0.45)';
+          ctx.fill();
+
+          ctx.fillStyle = 'rgba(255,255,255,0.5)';
+          ctx.font = '14px "PingFang SC","Microsoft YaHei",sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('放入视频即可播放', W/2, H/2+60);
+
+          requestAnimationFrame(draw);
+        }
+        s._drawFns[v.id] = draw;
+        draw();
+      });
+
+      // ── 视频加载/错误处理 ──
+      s.list.forEach(function(v){
+        var el = s.vel(v);
+        var bg = el ? el.parentElement.querySelector('.bg') : null;
+        if (!el) return;
+
+        if (v.src) {
+          el.style.display = 'none';
+          if (bg) bg.style.display = 'block';
+          v.loading = true;
+
+          el.addEventListener('loadstart', function(){ v.loading = true; });
+          el.addEventListener('loadeddata', function(){
+            v.loading = false;
+            el.style.display = 'block';
+            if (bg) bg.style.display = 'none';
+          });
+          el.addEventListener('ended', function(){
+            v.progress = 0;
+          });
+          el.addEventListener('error', function(){
+            v.loading = false;
+            el.style.display = 'none';
+            if (bg) bg.style.display = 'block';
+            var c = bg.querySelector('canvas');
+            if (c) {
+              var ctx2 = c.getContext('2d');
+              ctx2.fillStyle = 'rgba(255,255,255,0.7)';
+              ctx2.font = '13px "PingFang SC","Microsoft YaHei",sans-serif';
+              ctx2.textAlign = 'center';
+              ctx2.fillText('视频加载失败', c.width/2, c.height/2+80);
+            }
+          });
+        } else {
+          el.style.display = 'none';
+          if (bg) bg.style.display = 'block';
+        }
+      });
+
+      s.playV();
+    });
+
+    // 键盘
+    document.addEventListener('keydown', function(e){
+      if (s.cs || s.ss) return;
+      if (e.key === 'ArrowUp' && s.idx < s.list.length - 1) s.go(s.idx + 1);
+      else if (e.key === 'ArrowDown' && s.idx > 0) s.go(s.idx - 1);
+      else if (e.key === ' ') { e.preventDefault(); s.tp(s.cur); }
+    });
+  },
+
+  beforeDestroy: function(){ this.stopT(); }
+  });
+
+})();
+</script>
+</body>
+</html>
