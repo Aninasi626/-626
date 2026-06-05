@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>化工智能控制技术 — 自动化专题</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ═══════════ 导航栏 ═══════════ -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <span class="icon">⚗</span> 化工实训
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-label="菜单">☰</button>
+    <div class="nav-links" id="navLinks">
+      <a href="index.html">产品说明书</a>
+      <a href="safety.html">安全生产</a>
+      <a href="automation.html" class="active">智能控制</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════ 页面头部 ═══════════ -->
+<header class="page-header">
+  <h1>🤖 化工智能控制技术</h1>
+  <p>从 PLC 到工业互联网 — 化工自动化的技术演进与前沿趋势</p>
+</header>
+
+<!-- ═══════════ 面包屑 ═══════════ -->
+<div class="breadcrumb">
+  🏠 <a href="index.html">首页</a> / <span>智能控制</span>
+</div>
+
+<!-- ═══════════ 控制架构 ═══════════ -->
+<section class="section">
+  <h2 class="section-title">🏗 工业控制架构</h2>
+  <p class="section-subtitle">ISA-95 标准的五层自动化金字塔模型</p>
+
+  <div class="grid-2">
+    <div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="card" style="border-left:4px solid #e91e63;">
+          <h3 style="font-size:16px;">🏢 L5 — 企业资源计划 (ERP)</h3>
+          <p style="font-size:13px;">SAP / Oracle，生产排程、物料管理、财务核算</p>
+        </div>
+        <div class="card" style="border-left:4px solid #ff9800;">
+          <h3 style="font-size:16px;">📊 L4 — 制造执行系统 (MES)</h3>
+          <p style="font-size:13px;">生产调度、质量管理、批次追踪、KPI 看板</p>
+        </div>
+        <div class="card" style="border-left:4px solid #4caf50;">
+          <h3 style="font-size:16px;">🖥 L3 — 监控与数据采集 (SCADA)</h3>
+          <p style="font-size:13px;">WinCC / iFIX / InTouch，实时监控、报警管理、数据存储</p>
+        </div>
+        <div class="card" style="border-left:4px solid #2196f3;">
+          <h3 style="font-size:16px;">🎛 L2 — 过程控制层 (PLC/DCS)</h3>
+          <p style="font-size:13px;">西门子 S7 / 艾默生 DeltaV / AB ControlLogix，PID 控制、顺序控制</p>
+        </div>
+        <div class="card" style="border-left:4px solid #9c27b0;">
+          <h3 style="font-size:16px;">📡 L1 — 现场设备层</h3>
+          <p style="font-size:13px;">传感器、变送器、执行器、阀门定位器、变频器</p>
+        </div>
+      </div>
+    </div>
+    <aside class="aside-img">
+      <div class="img-placeholder tech">
+        <div style="text-align:center;">
+          <div style="font-size:80px;">🏗</div>
+          <div style="font-size:18px;margin-top:10px;">ISA-95 自动化金字塔</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ═══════════ 控制策略 ═══════════ -->
+<section class="section" style="background:var(--white);max-width:100%;">
+  <div style="max-width:var(--max-width);margin:0 auto;">
+    <h2 class="section-title">⚙ 先进控制策略</h2>
+    <p class="section-subtitle">从经典 PID 到人工智能驱动的下一代控制技术</p>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon" style="background:#e3f2fd;">📐</div>
+        <h3>PID 控制</h3>
+        <p>化工过程控制的基础，比例-积分-微分三参数调节。适用于温度、压力、流量、液位等单回路控制。HC-3000 支持手动/自动无扰切换与自整定功能。</p>
+        <div style="margin-top:12px;">
+          <span class="badge" style="background:var(--bg);color:var(--primary);font-size:12px;">经典算法</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:#f3e5f5;">🔗</div>
+        <h3>串级控制</h3>
+        <p>主副双环结构，副回路快速抑制扰动，主回路精确控制被控变量。典型应用：精馏塔温度-流量串级、反应釜温度-冷却水流量串级。</p>
+        <div style="margin-top:12px;">
+          <span class="badge" style="background:var(--bg);color:var(--primary);font-size:12px;">双回路</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:#e8f5e9;">📊</div>
+        <h3>前馈-反馈控制</h3>
+        <p>前馈通道补偿可测扰动，反馈通道消除余差。适用于负荷变化频繁的换热器出口温度控制等场景。</p>
+        <div style="margin-top:12px;">
+          <span class="badge" style="background:var(--bg);color:var(--primary);font-size:12px;">抗扰优化</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:#fff3e0;">🧠</div>
+        <h3>模糊控制</h3>
+        <p>基于专家经验的模糊规则推理，无需精确数学模型。适用于非线性强、时变大的复杂化工过程控制。</p>
+        <div style="margin-top:12px;">
+          <span class="badge" style="background:var(--bg);color:var(--primary);font-size:12px;">智能算法</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:#fce4ec;">🎯</div>
+        <h3>模型预测控制 (MPC)</h3>
+        <p>基于过程模型预测未来输出，滚动优化求解最优控制序列。多变量协调控制，显式处理约束条件。典型应用：精馏塔组分控制。</p>
+        <div style="margin-top:12px;">
+          <span class="badge" style="background:var(--bg);color:var(--primary);font-size:12px;">多变量</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background:#e0f2f1;">🌐</div>
+        <h3>工业互联网</h3>
+        <p>基于 OPC UA + MQTT 协议将装置数据接入云平台。支持远程监控、数字孪生、AI 异常预警和大数据分析。</p>
+        <div style="margin-top:12px;">
+          <span class="badge" style="background:var(--bg);color:var(--primary);font-size:12px;">前沿技术</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 通讯协议 ═══════════ -->
+<section class="section">
+  <h2 class="section-title">📡 工业通讯协议</h2>
+  <p class="section-subtitle">HC-3000 实训装置支持的主流工业通讯标准</p>
+
+  <div style="overflow-x:auto;">
+  <table class="spec-table">
+    <thead>
+      <tr>
+        <th>协议名称</th>
+        <th>物理层</th>
+        <th>应用场景</th>
+        <th>特点</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Modbus RTU</strong></td><td>RS-485</td><td>仪表、变频器通讯</td><td>简单可靠、广泛兼容</td></tr>
+      <tr><td><strong>Modbus TCP</strong></td><td>Ethernet</td><td>PLC 与 HMI 数据交换</td><td>以太网传输、速度快</td></tr>
+      <tr><td><strong>Profinet</strong></td><td>Ethernet</td><td>西门子设备实时控制</td><td>确定性延迟 < 1ms</td></tr>
+      <tr><td><strong>HART</strong></td><td>4-20mA + 数字</td><td>智能变送器参数配置</td><td>模拟+数字双模</td></tr>
+      <tr><td><strong>OPC UA</strong></td><td>Ethernet</td><td>跨平台数据集成、云端</td><td>安全加密、语义建模</td></tr>
+      <tr><td><strong>MQTT</strong></td><td>Ethernet / WiFi</td><td>物联网云平台数据上报</td><td>轻量级、发布/订阅</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ═══════════ 数字孪生 ═══════════ -->
+<section class="section" style="background:var(--white);max-width:100%;">
+  <div style="max-width:var(--max-width);margin:0 auto;">
+    <h2 class="section-title">👥 数字孪生与虚拟仿真</h2>
+    <p class="section-subtitle">虚实结合，开启化工实训新范式</p>
+
+    <div class="device-showcase">
+      <aside class="aside-img">
+        <div class="img-placeholder tech">
+          <div style="text-align:center;">
+            <div style="font-size:80px;">👥</div>
+            <div style="font-size:18px;margin-top:10px;">数字孪生平台</div>
+          </div>
+        </div>
+      </aside>
+      <div class="device-info">
+        <h2>虚实联动实训系统</h2>
+        <p>HC-3000 可选配<strong>数字孪生模块</strong>，通过实时数据驱动虚拟装置模型，实现以下功能：</p>
+        <div class="feature-list" style="margin-top:16px;">
+          <div class="feature-item">
+            <span class="fi-icon">🪞</span>
+            <div><h4>实时镜像</h4><p>物理装置的运行状态 1:1 映射到虚拟模型，延迟 < 100ms</p></div>
+          </div>
+          <div class="feature-item">
+            <span class="fi-icon">🔮</span>
+            <div><h4>预测性维护</h4><p>基于历史数据训练 AI 模型，提前预测设备故障，降低非计划停机</p></div>
+          </div>
+          <div class="feature-item">
+            <span class="fi-icon">🎓</span>
+            <div><h4>虚拟实训</h4><p>学生可先在虚拟环境中操作练习，熟悉流程后再上真机操作，降低风险</p></div>
+          </div>
+          <div class="feature-item">
+            <span class="fi-icon">📈</span>
+            <div><h4>工艺优化</h4><p>在数字孪生体上测试不同控制参数组合，寻找最优操作点，再下发至物理装置</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ CTA ═══════════ -->
+<section class="cta">
+  <h2>🤝 技术演示预约</h2>
+  <p>欢迎预约 HC-3000 智能控制功能现场演示，体验先进控制算法的实际效果</p>
+  <a href="index.html" class="btn btn-outline">📋 返回产品说明书</a>
+</section>
+
+<!-- ═══════════ 页脚 ═══════════ -->
+<footer class="footer">
+  <div class="footer-links">
+    <a href="index.html">产品说明书</a>
+    <a href="safety.html">安全生产</a>
+    <a href="automation.html">智能控制</a>
+  </div>
+  <p>© 2026 化工实训设备有限公司 | 智能控制 · 驱动未来</p>
+</footer>
+
+<button class="back-top" id="backTop" title="回到顶部">⬆</button>
+
+<script src="js/main.js"></script>
+</body>
+</html>
